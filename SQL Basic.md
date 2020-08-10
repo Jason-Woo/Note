@@ -849,3 +849,148 @@ WHERE client_id =
 ```
 
 
+
+## Aggregate Functions聚合函数
+
+多输入 单输出
+
+* MAX() MIN()
+* AVG() SUM() COUNT()
+
+```mysql
+SELECT 
+	MAX(invoice_total) AS highest,
+	MIN(invoice_total) AS lowests,
+	AVG(invoice_total * 1.1) As avergae
+FROM invoices
+```
+
+如果出现空值不会被处理
+
+```mysql
+COUNT(invoice_total)
+COUNT(*) AS total_records
+```
+
+第二句才能返回真实大小
+
+同时COUNT()函数忽视重复值
+
+```mysql
+COUNT(client_id)
+COUNT (DISTINCT client_id)
+```
+
+第二句才能返回有多少独立的客户
+
+
+
+##  GROUP BY clause
+
+```mysql
+SELECT 
+	client_id,
+	SUM(invoice_toal) As total_sales
+FROM invoices
+WHERE invoice_date >= '2019-07-01'
+GROUP BY client_id
+ORDER BY total_sales DESC
+```
+
+根据客户来求和
+
+多行的group by
+
+```mysql
+SELECT 
+	state,
+	city,
+	SUM(invoice_toal) As total_sales
+FROM invoices
+JOIN clients USING (client_id)
+GROUP BY state, city
+```
+
+
+
+## HAVING Clause
+```mysql
+SELECT 
+	client_id,
+	SUM(invoice_toal) As total_sales
+FROM invoices
+GROUP BY client_id
+```
+
+假设我们现在只想要total_sales超过200的客户，不能用WHERE，因为GROUP BY在WHERE之后执行
+
+```mysql
+SELECT 
+	client_id,
+	SUM(invoice_toal) As total_sales
+FROM invoices
+GROUP BY client_id
+HAVING total_sales > 500
+```
+
+```mysql
+SELECT 
+	client_id,
+	SUM(invoice_toal) As total_sales,
+	COUNT(*) As number_of_invoices
+FROM invoices
+GROUP BY client_id
+HAVING total_sales > 500 AND number_of_invoices > 5
+```
+
+HAVING 中的条件一定要在SELECT内！但是WHERE不用
+
+```mysql
+USE sql_store;
+
+SELECT 
+	c.customer_id,
+	c.first_name,
+	c.last_name,
+	SUM(oi.quantity * oi.unit_price) AS total_sales
+FROM customers c
+JOIN orders o
+	ON c.customer_id = o.customer_id
+JOIN order_items oi
+	ON oi.order_id = o.order_id
+WHERE state = 'VA'
+GROUP BY 
+	c.customer_id,
+	c.first_name,
+	c.last_name
+HAVING total_sales > 100
+```
+
+
+
+## ROLLUP operator
+
+仅在mysql中存在
+
+```mysql
+SELECT 
+	client_id,
+	SUM(invoice_toal) As total_sales
+FROM invoices
+GROUP BY client_id WITHROLLUP
+```
+
+会在结尾添加一行求和结果
+
+```mysql
+SELECT 
+	state,
+	city,
+	SUM(invoice_toal) As total_sales
+FROM invoices
+JOIN client c USING (client_id)
+GROUP BY state, city WITH ROLLUP
+```
+
+会根据每一个city生成一次求和，然后所有的state生成一次求和
+
