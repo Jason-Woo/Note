@@ -438,7 +438,7 @@ JOIN order_statuses os
 
 ## 复合的连接条件
 
-对于有两个primarily key的表格，例如同一个order的同一个product有两条note
+对于有两个primarily key的表格，例如同一个order的同一个product有两条note，同时需要order_id和product_id来确定唯一的一个对象
 
 ```mysql
 SELECT * 
@@ -471,5 +471,172 @@ WHERE o.customer_id = c.cunstomer_id
 
 
 
-## Outer Joins
+## OUTER JOIN
 
+```mysql
+SELECT 
+	c.customer_id
+	c.first_name
+	o.order_id
+FROM customer c
+JOIN orders o
+	ON c.customer_id = o.customer_id
+ORDER BY c.cunstomer_id
+```
+
+使用inner join会发生这种情况：最后输出的表格只能看到有订单的客户，因为在inner join时是根据
+
+```
+c.customer_id = o.customer_id
+```
+
+来合并的，没有订单的客户在o.customer_id中没有值。
+
+```mysql
+SELECT 
+	c.customer_id
+	c.first_name
+	o.order_id
+FROM customer c
+LEFT JOIN orders 0
+	ON c.customer_id = o.customer_id
+ORDER BY c.cunstomer_id
+```
+
+使用LEFT JOIN时，所有左边表格的值都会被返回，无论条件是否满足
+
+使用RIGHT JOIN时，所有右边表格的值都会被返回，无论条件是否满足，在上面的情况下和inner join输出的结果是一样的。
+
+
+
+## 多张表的OUTER JOIN
+
+```mysql
+SELECT 
+	c.customer_id
+	c.first_name
+	o.order_id
+	sh.name AS shipper
+FROM customer c
+LEFT JOIN orders 0
+	ON c.customer_id = o.customer_id
+LEFT JOIN shippers sh
+	ON o.shipper_id = sh.shipper_id
+ORDER BY c.cunstomer_id
+```
+
+最好避免RIGHT JOIN来避免阅读的复杂性
+
+
+
+## self OUTER JOIN
+
+还是那个employee的例子，直接使用JOIN会确实manager的行，所以使用left join
+
+```mysql
+USE sql_hr;
+
+SELECT
+	e.employee_id
+	e.first_name
+	m.first_name As manager
+FROM employees e
+LEFT JOIN employees m
+	ON e.reports_to = m.employee_id
+```
+
+
+
+## USING clause
+
+在mysql中，可以做如下替换，尽在列名相同时
+
+```mysql
+SELECT 
+	o.order_id,
+	c.first_name
+FROM customer o
+JOIN orders c
+	-- ON o.customer_id = c.customer_id
+	USING (customer_id)
+ORDER BY c.cunstomer_id
+```
+
+```mysql
+SELECT *
+FROM order_items oi
+JOIN order_item_notes oin
+	-- ON oi.order_id = oin.order_id
+	-- ANd oi.product_id = oin.product_id
+	USING (order_id, product_id)
+	
+```
+
+
+
+## Natural JOIN
+
+也是mysql中独有的
+
+```mysql
+SELECT 
+	o.order_id,
+	c.first_name
+FROM order o
+NATURAL JOIN customer c
+```
+
+不需要自己指出join的列，系统会根据公共列自己join tables
+
+不建议使用
+
+
+
+## CROSS JOIN
+
+将第一张表中的所有记录与第二张表中的所有记录join
+
+```mysql
+SELECT
+	c.first_name AS customer,
+	p.name AS product
+FROM customers c
+CROSS JOIN products p
+ORDER BY c.first_name
+```
+
+这种写法也不需要指定列
+
+隐式写法：
+
+```mysql
+SELECT
+	c.first_name AS customer,
+	p.name AS product
+FROM customers c, orders o
+ORDER BY c.first_name
+```
+
+
+
+## Unions
+
+每一个订单都有order_date，我们想要添加一个标签来表示这个订单是不是今年被下达的
+
+```mysql
+SELECT
+	order_id,
+	order_date,
+	'Active' As status
+FROM orders
+WHERE order_id >= '2019-01-01'
+UNION
+SELECT
+	order_id,
+	order_date,
+	'Archived' As status
+FROM orders
+WHERE order_id < '2019-01-01'
+```
+
+unions时把两张表在行上进行了结合
