@@ -36,7 +36,7 @@ SELECT *
 FROM customers
 ```
 
-```sql
+```mysql
 USE sql_store;
 
 SELECT *
@@ -640,3 +640,212 @@ WHERE order_id < '2019-01-01'
 ```
 
 unions时把两张表在行上进行了结合
+
+UNIONS也可以在两张不同的表上进行，要注意的是两次SELECT返回的列数应该是相等的
+
+最后输出的列名为第一次SELECT的列名
+
+
+
+
+
+## 插入，更新，删除数据
+
+### 列的属性
+
+![image-20200810160544438](img_sql\image-20200810160544438.png)
+
+如上图，pk表示primary key，NN表示Not Null不可为空，AI表示Automatically increase。我们一般用VARCHAR来存储字符串，char是定长的，所以长度不足规定的会被自动补全空格
+
+
+
+### 插入行
+
+```mysql
+INSERT INTO customers
+VALUES (
+    DEFAULT, 
+    'John', 
+    'Smith', 
+    NULL,
+	DEFAULT,
+	'adress',
+	'city',
+	'CA',
+	DEFAULT)
+```
+不需要插入所有的值，顺序是不重要的
+```mysql
+INSERT INTO customers (
+	first_name,
+	last_name,
+	adress,
+	city,
+	state)
+VALUES (
+    'John', 
+    'Smith', 
+	'adress',
+	'city',
+	'CA')
+```
+
+
+
+### 插入多行
+
+![image-20200810161453052](img_sql\image-20200810161453052.png)
+
+```mysql
+INSERT INTO shippers(name)
+VALUES ('Shipper1'),
+	('Shipper2'),
+	('Shipper3')
+```
+
+
+
+### 多个表中插入行
+
+![image-20200810162153323](img_sql\image-20200810162153323.png)
+
+![image-20200810162220424](img_sql\image-20200810162220424.png)
+
+如上图，一个oder会对应多个order_items。order_id是在插入order表中是走动生成的
+
+```mysql
+INSERT INTO orders(customer_id, order_date, status)
+VALUES(1, '2019-01-02', 1);
+
+INSERT INTO order_itmes
+VALUES
+	(LAST_INSERT_ID(), 1, 1, 2.95)
+	(LAST_INSERT_ID(), 2, 1, 3.95)
+```
+
+LAST_INSERT_ID()函数存储了上次插入的id
+
+
+
+### 从表格中复制数据
+
+```mysql
+CREATE TABLE order_archived AS
+SELECT * FROM orders
+```
+
+但是mysql会忽略列的PK和AI这两条属性
+
+```mysql
+INSERT INTO order_archived
+SELECT *
+FROM orders
+WHERE order_date < '2019-01-01'
+```
+
+嵌套的语句
+
+```mysql
+USE sql_invoicing;
+
+CREATE TABLE invoices_archive AS
+SELECT
+	i.invoice_id,
+	i.number,
+	c.name As client,
+	i.invoice_toal,
+	i.payment_toal,
+	i.invoice_date,
+	i.payment_date,
+	i.due_date
+FROM invoices i
+JOIN clients c
+	ON i.client_id = c.client_id
+WHERE i.payment_date IS NOt NULL
+```
+
+
+
+###  更新一行
+
+```mysql
+UPDATE invoices
+SET payment_toal = 10, payment_date = '2019-03-01'
+WHERE invoice_id = 1
+```
+
+带有表达式的
+
+```sql
+UPDATE invoices
+SET
+	payment_total = invoice_toal * 0.5
+	payment_date = due_date
+WHERE invoice_id = 3
+```
+
+
+
+### 更新多行
+
+```sql
+UPDATE invoices
+SET
+	payment_total = invoice_toal * 0.5
+	payment_date = due_date
+WHERE invoice_id = IN(3, 4)
+```
+
+
+
+```mysql
+USE sql_store;
+
+UPDATE cutomers
+SET points = points + 50
+WHERE birth_date < '1990-01-01'
+```
+
+
+
+### 在更新语句中使用子查询
+
+假设我们只知道名字，不知道id
+
+```mysql
+UPDATE invoices
+SET
+	payment_total = invoice_toal * 0.5
+	payment_date = due_date
+WHERE invoice_id = 
+                (SELECT client_id
+                FROM clients
+                WHERE name = 'Myworks')
+```
+
+```mysql
+UPDATE invoices
+SET
+	payment_total = invoice_toal * 0.5
+	payment_date = due_date
+WHERE invoice_id IN 
+                (SELECT client_id
+                FROM clients
+                WHERE name IN ('CA', 'NY'))
+```
+
+为了保证更新的正确，一般我们先写出SELECT语句核对结果后再写UPDATE
+
+
+
+### 删除行
+
+```mysql
+DELETE FROM invoices
+WHERE client_id = 
+			(SELECT *
+			FROM clients
+			WHERE name = 'MYworks')
+```
+
+
