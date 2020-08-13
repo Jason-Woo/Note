@@ -94,6 +94,9 @@
   * kmeans
   * BFR 
     * Assume every cluster satisfied normalized distribution
+  * CURE
+    * Allows clusters to assume any shape
+    * Uses a collection of representative points to represent clusters
 
 * dimensionality reduction
 
